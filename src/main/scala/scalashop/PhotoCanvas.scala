@@ -1,12 +1,10 @@
 package scalashop
 
 import java.awt._
-import java.awt.event._
 import java.awt.image._
 import java.io._
 import javax.imageio._
 import javax.swing._
-import javax.swing.event._
 
 class PhotoCanvas extends JComponent {
 

@@ -15,14 +15,14 @@ object ScalaShop {
     setSize(1024, 600)
     setLayout(new BorderLayout)
 
-    val rightpanel = new JPanel
-    rightpanel.setBorder(BorderFactory.createEtchedBorder(border.EtchedBorder.LOWERED))
-    rightpanel.setLayout(new BorderLayout)
-    add(rightpanel, BorderLayout.EAST)
+    val rightPanel = new JPanel
+    rightPanel.setBorder(BorderFactory.createEtchedBorder(border.EtchedBorder.LOWERED))
+    rightPanel.setLayout(new BorderLayout)
+    add(rightPanel, BorderLayout.EAST)
 
     val controls = new JPanel
     controls.setLayout(new GridLayout(0, 2))
-    rightpanel.add(controls, BorderLayout.NORTH)
+    rightPanel.add(controls, BorderLayout.NORTH)
 
     val filterLabel = new JLabel("Filter")
     controls.add(filterLabel)
@@ -66,7 +66,7 @@ object ScalaShop {
 
     val info = new JTextArea("   ")
     info.setBorder(BorderFactory.createLoweredBevelBorder)
-    rightpanel.add(info, BorderLayout.SOUTH)
+    rightPanel.add(info, BorderLayout.SOUTH)
 
     val mainMenuBar = new JMenuBar()
 

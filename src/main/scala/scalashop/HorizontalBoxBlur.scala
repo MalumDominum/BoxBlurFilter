@@ -9,24 +9,23 @@ object HorizontalBoxBlurRunner {
     Key.exec.maxWarmupRuns := 10,
     Key.exec.benchRuns := 10,
     Key.verbose := true
-  ) withWarmer(new Warmer.Default)
+  ) withWarmer new Warmer.Default
 
   def main(args: Array[String]): Unit = {
     val radius = 3
     val width = 1920
     val height = 1080
+    val numTasks = 8
     val src = new Img(width, height)
     val dst = new Img(width, height)
-    val seqtime = standardConfig measure {
+    val seqTime = standardConfig measure {
       HorizontalBoxBlur.blur(src, dst, 0, height, radius)
     }
-
-    val numTasks = 32
-    val partime = standardConfig measure {
+    val parTime = standardConfig measure {
       HorizontalBoxBlur.parBlur(src, dst, numTasks, radius)
     }
-    println(s"fork/join blur time: $partime")
-    println(s"speedup: ${seqtime.value / partime.value}")
+    println(s"fork/join blur time: $parTime")
+    println(s"speedup: ${seqTime.value / parTime.value}")
   }
 }
 
@@ -39,8 +38,13 @@ object HorizontalBoxBlur extends HorizontalBoxBlurInterface {
    *  Within each row, `blur` traverses the pixels by going from left to right.
    */
   def blur(src: Img, dst: Img, from: Int, end: Int, radius: Int): Unit = {
-    // TODO implement this method using the `boxBlurKernel` method
-    ???
+    for (y <- from until end) {
+      var x = 0
+      while (x < src.width) {
+        dst.update(x, y, boxBlurKernel(src, x, y, radius))
+        x += 1
+      }
+    }
   }
 
   /** Blurs the rows of the source image in parallel using `numTasks` tasks.
@@ -50,8 +54,20 @@ object HorizontalBoxBlur extends HorizontalBoxBlurInterface {
    *  rows.
    */
   def parBlur(src: Img, dst: Img, numTasks: Int, radius: Int): Unit = {
-    // TODO implement using the `task` construct and the `blur` method
-    ???
-  }
+    val partHeight = if (src.height / numTasks != 0)
+                         src.height / numTasks
+                     else 1
 
+    def parBlurRecurs(src: Img, dst: Img, numTasks: Int, radius: Int, i: Int): Unit =
+      if (i < src.height) parallel(
+        blur(src,
+             dst,
+             clamp(i, 0, src.height - 1),
+             clamp(i + partHeight, 0, src.height),
+             radius),
+        parBlurRecurs(src, dst, numTasks, radius, i + partHeight)
+      )
+
+    parBlurRecurs(src, dst, numTasks, radius, 0)
+  }
 }

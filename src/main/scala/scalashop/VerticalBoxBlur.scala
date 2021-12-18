@@ -1,7 +1,6 @@
 package scalashop
 
 import org.scalameter._
-import scalashop.HorizontalBoxBlur.blur
 
 object VerticalBoxBlurRunner {
 
@@ -10,25 +9,25 @@ object VerticalBoxBlurRunner {
     Key.exec.maxWarmupRuns := 10,
     Key.exec.benchRuns := 10,
     Key.verbose := true
-  ) withWarmer (new Warmer.Default)
+  ) withWarmer new Warmer.Default
 
   def main(args: Array[String]): Unit = {
-    val radius = 3
+    val radius = 16
     val width = 1920
     val height = 1080
+    val numTasks = 8
     val src = new Img(width, height)
     val dst = new Img(width, height)
-    val seqtime = standardConfig measure {
+    val seqTime = standardConfig measure {
       VerticalBoxBlur.blur(src, dst, 0, width, radius)
     }
-    println(s"sequential blur time: $seqtime")
+    println(s"sequential blur time: $seqTime")
 
-    val numTasks = 32
-    val partime = standardConfig measure {
+    val parTime = standardConfig measure {
       VerticalBoxBlur.parBlur(src, dst, numTasks, radius)
     }
-    println(s"fork/join blur time: $partime")
-    println(s"speedup: ${seqtime.value / partime.value}")
+    println(s"fork/join blur time: $parTime")
+    println(s"speedup: ${seqTime.value / parTime.value}")
   }
 
 }
@@ -43,8 +42,13 @@ object VerticalBoxBlur extends VerticalBoxBlurInterface {
     * bottom.
     */
   def blur(src: Img, dst: Img, from: Int, end: Int, radius: Int): Unit = {
-    // TODO implement this method using the `boxBlurKernel` method
-    ???
+    for (x <- from until end) {
+      var y = 0
+      while (y < src.height) {
+        dst.update(x, y, boxBlurKernel(src, x, y, radius))
+        y += 1
+      }
+    }
   }
 
   /** Blurs the columns of the source image in parallel using `numTasks` tasks.
@@ -54,8 +58,20 @@ object VerticalBoxBlur extends VerticalBoxBlurInterface {
     * columns.
     */
   def parBlur(src: Img, dst: Img, numTasks: Int, radius: Int): Unit = {
-    // TODO implement using the `task` construct and the `blur` method
-    ???
-  }
+    val partWidth = if (src.width / numTasks != 0)
+                        src.width / numTasks
+                    else 1
 
+    def parBlurRecurs(src: Img, dst: Img, numTasks: Int, radius: Int, i: Int): Unit =
+      if (i < src.width) parallel(
+        blur(src,
+             dst,                                  // Calculating blur
+             clamp(i, 0, src.width - 1),           // From this
+             clamp(i + partWidth, 0, src.width),   // To this
+             radius),
+        parBlurRecurs(src, dst, numTasks, radius, i + partWidth)
+      )
+
+    parBlurRecurs(src, dst, numTasks, radius, 0)
+  }
 }
